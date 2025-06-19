@@ -1,0 +1,3 @@
+.vscode
+# Ignore node_modules directory
+*.exe
