@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
+#include <iostream>
 #include <span>
 #include <random>
 
@@ -50,9 +51,12 @@ int main(){
 
     auto work_start = [](span<int> jobs){
         for (int job_duration : jobs){
-            this_thread::sleep_for(chrono::milliseconds(job_duration));
+            this_thread::sleep_for(chrono::microseconds(job_duration));
         }
     };
+
+    // starting clock
+    auto start_time = chrono::high_resolution_clock::now();
 
     int num_threads = 8;
     // we assume equal division for simplicity
@@ -62,10 +66,16 @@ int main(){
     for(int i = 0; i < num_threads; i++){
         // start index for job for each thread
         int start = i * jobs_per_thread;
+
         // start the thread with the span of the job assinged to it
-        span<int> thread_jobs(work.begin() + start, work.begin() + start + jobs_per_thread);
-        threads.emplace_back(work_start, thread_jobs);
+        threads.emplace_back(work_start, span(work.begin()+start,jobs_per_thread));
     }
+
+    // end of clock
+    auto end_time = chrono::high_resolution_clock::now();
+    auto total_duration = chrono::duration_cast<chrono::microseconds>(end_time - start_time);
+
+    cout << "Total execution time: " << total_duration.count() << " ms\n";
 
     return 0;
 
