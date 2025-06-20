@@ -1,5 +1,6 @@
 //
 // Static Work Distribution on Large Chunks
+// with fine grained Round Robin Assignment
 //
 
 #include <chrono>
@@ -49,26 +50,20 @@ int main(){
     work_assign(b3);
     work_assign(b4);
 
-    auto work_start = [](span<int> jobs){
-        for (int job_duration : jobs){
-            this_thread::sleep_for(chrono::microseconds(job_duration));
+    int num_threads = 8;
+
+    auto work_start = [&](int thread_id){
+        for (int i = thread_id; i < num_items; i+= num_threads){
+            this_thread::sleep_for(chrono::microseconds(work[i]));
         }
     };
 
-    int num_threads = 8;
-    // we assume equal division for simplicity
-    int jobs_per_thread = num_items/num_threads;
-
     // starting clock
     auto start_time = chrono::high_resolution_clock::now();
-
+    
     vector<jthread> threads;
     for(int i = 0; i < num_threads; i++){
-        // start index for job for each thread
-        int start = i * jobs_per_thread;
-
-        // start the thread with the span of the job assinged to it
-        threads.emplace_back(work_start, span(work.begin()+start,jobs_per_thread));
+        threads.emplace_back(work_start,i);
     }
 
     // end of clock
@@ -81,3 +76,6 @@ int main(){
 
 
 }
+
+// compile with
+// g++ <file_name> -lpthread -o <exec_name> -std=c++20
