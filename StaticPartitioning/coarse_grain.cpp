@@ -1,6 +1,5 @@
 //
 // Static Work Distribution on Large Chunks
-// with fine grained Round Robin Assignment
 //
 
 #include <chrono>
@@ -17,7 +16,7 @@ using namespace std;
 using uid = uniform_int_distribution<>;
 
 int main(){
-    // 2^16 items
+    // 2^18 items
     int num_items = 1 << 18;
     int num_bins = 4;
     int items_per_bin = num_items/num_bins;
@@ -33,7 +32,7 @@ int main(){
     uid b4 (76,100);
     
     // our work vector
-    vector<int> work(num_items);
+    vector<int> work;
     
     // lambda to assign work diff jobs
     auto work_assign = [&](uid bin_type){
@@ -50,20 +49,26 @@ int main(){
     work_assign(b3);
     work_assign(b4);
 
-    int num_threads = 8;
-
-    auto work_start = [&](int thread_id){
-        for (int i = thread_id; i < num_items; i+= num_threads){
-            this_thread::sleep_for(chrono::microseconds(work[i]));
+    auto work_start = [](span<int> jobs){
+        for (int job_duration : jobs){
+            this_thread::sleep_for(chrono::microseconds(job_duration));
         }
     };
 
+    int num_threads = 8;
+    // we assume equal division for simplicity
+    int jobs_per_thread = num_items/num_threads;
+
     // starting clock
     auto start_time = chrono::high_resolution_clock::now();
-    
+
     vector<jthread> threads;
     for(int i = 0; i < num_threads; i++){
-        threads.emplace_back(work_start,i);
+        // start index for job for each thread
+        int start = i * jobs_per_thread;
+
+        // start the thread with the span of the job assinged to it
+        threads.emplace_back(work_start, span(work.begin()+start,jobs_per_thread));
     }
 
     // end of clock
@@ -78,4 +83,5 @@ int main(){
 }
 
 // compile with
-// g++ <file_name> -lpthread -o <exec_name> -std=c++20
+// g++ .\coarse_grain.cpp --std=c++20 -lpthread -O3 -o coarse
+//
