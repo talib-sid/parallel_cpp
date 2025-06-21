@@ -14,15 +14,13 @@ Thread 1 -> [jobs_per_thread : 2*jobs_per_thread) and so on.
 
 
 ### ✅ Advantages:
-- Low overhead — simple thread management and memory access.
-- Cache-friendly — good spatial locality in vector access.
+- Low overhead, Cache locality is good as each thread works on a contiguous block of memory.
 - Ideal when all jobs are of similar duration.
 
 ### ❌ Disadvantages:
-- Bad for load imbalance — if one chunk has heavy jobs (e.g., jobs from bin 76–100), that thread becomes a bottleneck while others finish early.
-- No dynamic scheduling; it assumes even distribution.
+- Bad for load imbalance; if one of chunk has heavy jobs (e.g., jobs from bin 76–100), that thread becomes a bottleneck while others finish early.
 
-## 2. Fine-Grained Round-Robin Assignment
+## 2. Fine-Grained (*Round-Robin Assignment*)
 - Each thread processes every `num_threads`-th job from the entire work array:
     * Thread 0 does jobs: `0, 8, 16, 24, ...`
     * Thread 1 does: `1, 9, 17, 25, ...` and so on.
@@ -32,13 +30,24 @@ Thread 1 -> [jobs_per_thread : 2*jobs_per_thread) and so on.
 
 
 ### ✅ Advantages:
-- Excellent load balancing when job durations vary a lot.
-- Even if heavy jobs are clustered in bins, round-robin evens it out across threads.
-- Better for heterogeneously distributed work (like ours: 25–100ms).
+- Good for load balancing when job durations vary a lot.
+- Even if heavy jobs are clustered in bins, it evens out across threads.
 
 ### ❌ Disadvantages:
 - Poor cache locality, as threads jump around in memory.
 - Slightly more overhead due to poor spatial access patterns.
-- Still no work stealing (which would help if imbalance occurs during runtime).
+- no work stealing (which would help if imbalance occurs during runtime).
 
 
+## Dyanmic Partitioning Strategies
+Dynamic partitioning strategies allow threads to dynamically adjust their workload based on the current state of the system and the jobs available. This can help to balance the load more effectively, especially when job durations vary significantly.
+## 1. Task-Based Parallelism
+- Instead of dividing the work into fixed chunks, we can use an atomic variable to keep track of the next job to be processed.
+- Each thread can then pick up the next available job from the shared atomic variable.
+- **File**: [dyn1.cpp](DynamicPartitioning/dyn1.cpp)
+### ✅ Advantages:
+- Excellent load balancing, as threads can pick up tasks based on their current workload.
+- Reduces idle time for threads, as they can take on more work if they finish early
+### ❌ Disadvantages:
+- More overhead due to the need for synchronization and communication between threads.
+- Complexity increases, as threads need to manage their own work queues (in other cases, we'll see) and atomic variables.
